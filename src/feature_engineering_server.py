@@ -39,7 +39,8 @@ def build_feature_df(df: pd.DataFrame) -> pd.DataFrame:
         "LD_PHQ9depr_event"   # target: 0/1
     ]
     feats = df[cols].copy()
-
+    # 1️⃣  Replace sentinel codes first
+    feats = feats.replace({-777: pd.NA, -888: pd.NA, -999: pd.NA})
     # Cast the categorical columns
     cat_cols = [
         "sleep_dur2",
@@ -58,7 +59,7 @@ def build_feature_df(df: pd.DataFrame) -> pd.DataFrame:
         feats[c] = feats[c].astype("category")
 
     # Convert SPSS sentinels (−777/−888/−999) to true missing
-    feats = feats.replace({-777: pd.NA, -888: pd.NA, -999: pd.NA})
+    #feats = feats.replace({-777: pd.NA, -888: pd.NA, -999: pd.NA})
 
     return feats
 
