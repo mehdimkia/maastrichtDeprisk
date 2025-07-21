@@ -5,17 +5,28 @@ from pathlib import Path
 import joblib
 import optuna
 import pandas as pd
+import numpy as np
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import SplineTransformer
 from xgboost import XGBClassifier
 
 # ------------------------------------------------------------------
 BASE = Path("/Volumes/education/DMS_744_S_Mirkialangaroodi/Databases")
+""" Base Training Features
 TRAIN_PQ = BASE / "Week7_train.parquet"
 TEST_PQ  = BASE / "Week7_test.parquet"
 OUT_PIPE = BASE / "Week7_xgb_onehot.joblib"
+"""
+#Training features with interactions included
+TRAIN_PQ = BASE / "Week7_train_interactions.parquet"
+TEST_PQ  = BASE / "Week7_test_interactions.parquet"
+
+# >>> write the model under a new name so nothing gets overwritten
+OUT_PIPE = BASE / "Week7_xgb_onehot_interactions.joblib"
+
 N_TRIALS = 50
 RANDOM_SEED = 42
 
@@ -28,8 +39,21 @@ cat_cols = train_df.select_dtypes("category").columns.tolist()
 neg_pos_ratio = (y_train == 0).sum() / (y_train == 1).sum()
 
 # ---------- fix here ▼ -------------------------------------------------------
+spline = SplineTransformer(
+    degree=3,
+    knots=np.array([[360],   # 6 h
+                    [420],   # 7 h
+                    [480],   # 8 h
+                    [540],   # 9 h
+                    [600]]), #10 h
+    include_bias=False,
+)
+
 pre = ColumnTransformer(
-    [("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=True), cat_cols)],
+    [
+        ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=True), cat_cols),
+        ("sleep_spline", spline, ["sleep_minutes"]),
+    ],
     remainder="passthrough",
     sparse_threshold=0.3,
 )
