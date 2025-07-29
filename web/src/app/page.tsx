@@ -1,103 +1,122 @@
-import Image from "next/image";
+/* web/src/app/page.tsx */
+import Link from "next/link";
+
+export const metadata = {
+  title: "Maastricht Deprisk – Depression‑risk Predictor",
+  description:
+    "Research prototype that estimates two‑year depression risk from sleep, activity and lifestyle data.",
+};
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
+      {/* --- NAVBAR ----------------------------------------------------------- */}
+      <header className="mx-auto flex max-w-6xl items-center justify-between p-6">
+        <Link
+          href="/"
+          className="text-2xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-400"
+        >
+          Deprisk<span className="text-indigo-400">•</span>
+        </Link>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <nav className="hidden gap-6 md:flex">
+          <Link
+            href="/predict"
+            className="font-medium text-zinc-600 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Predictor
+          </Link>
+          <Link
+            href="/powerbi"
+            className="font-medium text-zinc-600 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
           >
-            Read our docs
+            Dashboard
+          </Link>
+          <a
+            href="https://github.com/your‑org/maastrichtDeprisk"
+            target="_blank"
+            className="font-medium text-zinc-600 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
+          >
+            GitHub
           </a>
+        </nav>
+      </header>
+
+      {/* --- HERO ------------------------------------------------------------- */}
+      <section className="relative isolate overflow-hidden py-24 sm:py-32">
+        <div
+          className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,theme(colors.indigo.200)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,theme(colors.indigo.800)_0%,transparent_70%)]"
+          aria-hidden="true"
+        />
+
+        <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
+          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-6xl">
+            Predict depression risk&nbsp;before it manifests
+          </h1>
+          <p className="mx-auto mt-6 max-w-prose text-lg leading-8 text-zinc-600 dark:text-zinc-300">
+            Our model—a gradient‑boosted tree trained on{" "}
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+              6 years of Maastricht Study data
+            </span>
+            —estimates the probability of a major depressive episode within the
+            next two years using only wearable‑derived sleep and activity
+            metrics.
+          </p>
+
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+            <Link
+              href="/predict"
+              className="rounded-full bg-indigo-600 px-8 py-3 text-base font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus-visible:ring focus-visible:ring-indigo-500/75"
+            >
+              Try the predictor
+            </Link>
+            <Link
+              href="/powerbi"
+              className="rounded-full border border-zinc-300 px-8 py-3 text-base font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800/40"
+            >
+              View cohort insights
+            </Link>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </section>
+
+      {/* --- FEATURE STRIP ---------------------------------------------------- */}
+      <section className="mx-auto grid max-w-6xl gap-8 px-6 py-20 sm:grid-cols-3 lg:px-8">
+        {[
+          {
+            emoji: "⚡️",
+            title: "Real‑time scoring",
+            text: "Sub‑200 ms latency via FastAPI + XGBoost ‘hist’ model.",
+          },
+          {
+            emoji: "🛡️",
+            title: "Privacy‑first",
+            text: "No raw wearables data leaves your browser—only derived features are sent.",
+          },
+          {
+            emoji: "📊",
+            title: "Transparent metrics",
+            text: "AUROC 0.71 · AUPRC 0.29 on a hold‑out sample of 1 200 participants.",
+          },
+        ].map((f) => (
+          <div key={f.title} className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-2xl text-white">
+              {f.emoji}
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-white">
+              {f.title}
+            </h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{f.text}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* --- FOOTER ----------------------------------------------------------- */}
+      <footer className="border-t border-zinc-200 bg-white py-6 text-center dark:border-zinc-700 dark:bg-zinc-900">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          © {new Date().getFullYear()} Maastricht Deprisk · MIT License
+        </p>
       </footer>
-    </div>
+    </main>
   );
 }
