@@ -20,6 +20,10 @@
 # production
 /build
 
+# Model artifacts
+/api/models/*.joblib
+/api/models/*.meta.json
+
 # misc
 .DS_Store
 *.pem
