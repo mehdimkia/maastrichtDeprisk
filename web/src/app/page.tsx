@@ -33,7 +33,7 @@ export default function Home() {
             Dashboard
           </Link>
           <a
-            href="https://github.com/your‑org/maastrichtDeprisk"
+            href="https://github.com/mehdimkia/maastrichtDeprisk"
             target="_blank"
             className="font-medium text-zinc-600 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
           >
@@ -53,15 +53,14 @@ export default function Home() {
           <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-6xl">
             Predict depression risk&nbsp;before it manifests
           </h1>
-          <p className="mx-auto mt-6 max-w-prose text-lg leading-8 text-zinc-600 dark:text-zinc-300">
-            Our model—a gradient‑boosted tree trained on{" "}
-            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-              6 years of Maastricht Study data
-            </span>
-            —estimates the probability of a major depressive episode within the
-            next two years using only wearable‑derived sleep and activity
-            metrics.
-          </p>
+         <p className="mx-auto mt-6 max-w-prose text-lg leading-8 text-zinc-600 dark:text-zinc-300">
+            Our model, an XGBoost ensemble built on {" "}
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                12 years of Maastricht Study data
+              </span>
+              , predicts someone’s risk of a major depressive episode from wearable‑derived sleep and activity metrics, plus clinical and sociodemographic covariates.
+            </p>
+
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
             <Link
