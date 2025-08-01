@@ -20,10 +20,10 @@ from sklearn.impute import SimpleImputer
 # Paths – adjust BASE if you keep data elsewhere --------------------------------
 # -----------------------------------------------------------------------------
 BASE = Path("/Volumes/education/DMS_744_S_Mirkialangaroodi/Databases")
-RAW_PKL = BASE / "Week7.pkl"
-FEATURES_PQ = BASE / "Week7_features_interactions.parquet"
-TRAIN_PQ = BASE / "Week7_train_interactions.parquet"
-TEST_PQ = BASE / "Week7_test_interactions.parquet"
+RAW_PKL = BASE / "Week8.pkl"
+FEATURES_PQ = BASE / "Week8_features_interactions.parquet"
+TRAIN_PQ = BASE / "Week8_train_interactions.parquet"
+TEST_PQ = BASE / "Week8_test_interactions.parquet"
 
 # -----------------------------------------------------------------------------
 # Utility ---------------------------------------------------------------------

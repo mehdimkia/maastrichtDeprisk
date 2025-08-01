@@ -31,11 +31,11 @@ if not BASE.exists():
             break
 
 #Training features with interactions included
-TRAIN_PQ = BASE / "Week7_train_interactions.parquet"
-TEST_PQ  = BASE / "Week7_test_interactions.parquet"
+TRAIN_PQ = BASE / "Week8_train_interactions.parquet"
+TEST_PQ  = BASE / "Week8_test_interactions.parquet"
 
 # >>> write the model under a new name so nothing gets overwritten
-OUT_PIPE = BASE / "Week7_xgb_onehot_interactions.joblib"
+OUT_PIPE = BASE / "Week8_xgb_onehot_interactions.joblib"
 
 N_TRIALS = 100
 RANDOM_SEED = 42

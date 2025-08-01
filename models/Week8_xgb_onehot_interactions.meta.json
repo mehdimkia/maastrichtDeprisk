@@ -1,0 +1,18 @@
+{
+  "model_type": "XGBoost",
+  "auroc": 0.7129656319290465,
+  "auprc": 0.2945047672580348,
+  "params": {
+    "learning_rate": 0.04024263372190186,
+    "max_depth": 3,
+    "n_estimators": 150,
+    "subsample": 0.6775808249244395,
+    "colsample_bytree": 0.7551211177867941,
+    "gamma": 1.26451306831902,
+    "min_child_weight": 4.987083932197594
+  },
+  "lgbm_auroc": 0.6859617516629712,
+  "lgbm_auprc": 0.2841007002833057,
+  "xgb_auroc": 0.7129656319290465,
+  "xgb_auprc": 0.2945047672580348
+}

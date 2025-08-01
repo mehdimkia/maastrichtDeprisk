@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--out-pkl",
-        default=f"{base}/Week7.pkl",
+        default=f"{base}/Week8.pkl",
         help="Output pickle path (same secure volume)",
     )
     return parser.parse_args()
