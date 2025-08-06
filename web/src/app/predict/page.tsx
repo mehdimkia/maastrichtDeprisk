@@ -1,18 +1,13 @@
-/*  app/predict/page.tsx
-    -----------------------------------------------------------
-    – Physical-activity level is now OPTIONAL.
-    – If the user skips it, `standstep_q4` is omitted entirely
-      from the JSON payload.
-*/
-
+/*  app/predict/page.tsx  – fancy edition  */
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectTrigger,
@@ -31,30 +26,30 @@ type ApiResponse = { prob: number };
 
 export default function PredictPage() {
   /* ───────────── controlled inputs ───────────── */
-  const [sleepMin, setSleepMin]         = useState<number>(490);
-  const [fragmentation, setFragmentation] = useState<number>(1.9);
-  const [age, setAge]                   = useState<number>(60);
-  const [bmi, setBmi]                   = useState<number>(26);
-  const [sex, setSex]                   = useState<"M" | "F" | "">("");
-  const [smoking, setSmoking]           = useState<"0" | "1" | "2" | "">("");
-  const [alcohol, setAlcohol]           = useState<"0" | "1" | "2" | "">("");
-  const [diabetes, setDiabetes]         = useState<"0" | "1" | "">("");
+  const [sleepMin, setSleepMin]       = useState<number>(480);
+  const [fragmentation, setFragment]  = useState<number>(1.9);
+  const [age, setAge]                 = useState<number>(60);
+  const [bmi, setBmi]                 = useState<number>(26);
+  const [sex, setSex]                 = useState<"M" | "F" | "">("");
+  const [smoking, setSmoking]         = useState<"0" | "1" | "2" | "">("");
+  const [alcohol, setAlcohol]         = useState<"0" | "1" | "2" | "">("");
+  const [diabetes, setDiabetes]       = useState<"0" | "1" | "">("");
 
-  /* option-B inputs */
-  const [anyVuln, setAnyVuln]           = useState<boolean>(false);
-  const [activity, setActivity]         = useState<"low" | "med" | "high" | "">(
+  /* option-B */
+  const [anyVuln, setAnyVuln]         = useState(false);
+  const [activity, setActivity]       = useState<"low" | "med" | "high" | "">(
     ""
-  ); // ← optional!
-  const [neuropathy, setNeuropathy]     = useState<boolean>(false);
+  );
+  const [neuropathy, setNeuropathy]   = useState(false);
 
   /* UI state */
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
-  const [prob, setProb]       = useState<number | null>(null);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState<string | null>(null);
+  const [prob, setProb]               = useState<number | null>(null);
 
-  /* helpers -------------------------------------------------- */
+  /* helpers */
   const formValid = () =>
-    sex && smoking !== "" && alcohol !== "" && diabetes !== ""; // ← no activity check
+    sex && smoking !== "" && alcohol !== "" && diabetes !== "";
 
   const activityToQuartile = (lvl: typeof activity) =>
     lvl === "low" ? 1 : lvl === "med" ? 2 : lvl === "high" ? 4 : 2;
@@ -67,26 +62,25 @@ export default function PredictPage() {
     setError(null);
     setProb(null);
 
-    /* build payload */
     const payload: Record<string, any> = {
       sleep_minutes: sleepMin,
-      frag_index:    fragmentation,
+      frag_index: fragmentation,
       age,
       bmi,
       sex,
       smoking_cat: Number(smoking),
       alcohol_cat: Number(alcohol),
-      diabetes:     Number(diabetes),
-      any_vuln:     Number(anyVuln),
-      neuropathy:   Number(neuropathy),
+      diabetes: Number(diabetes),
+      any_vuln: Number(anyVuln),
+      neuropathy: Number(neuropathy),
     };
     if (activity) payload.standstep_q4 = activityToQuartile(activity);
 
     try {
       const res = await fetch("/api/score", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`API ${res.status}`);
       const data: ApiResponse = await res.json();
@@ -98,227 +92,225 @@ export default function PredictPage() {
     }
   }
 
+  /* colour helpers */
+  const riskBand = (p: number) =>
+    p < 0.25 ? ["Low", "bg-emerald-500"] : p < 0.40 ? ["Moderate", "bg-amber-500"] : ["High", "bg-rose-600"];
+
   /* ─────────────── render ─────────────── */
   return (
-    <motion.main
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="mx-auto max-w-xl px-4 py-16"
-    >
-      <Link href="/" className="text-sm text-indigo-600 hover:underline">
-        ← Home
-      </Link>
-
-      <h1 className="mt-4 text-3xl font-bold tracking-tight text-zinc-800 dark:text-zinc-100">
-        Depression-risk predictor
-      </h1>
-      <p className="mt-2 text-zinc-600 dark:text-zinc-300">
-        Enter your averages from the <strong>past 7 days</strong>; we’ll estimate
-        your <strong>4-year risk</strong> of developing clinically relevant
-        depressive symptoms.
-      </p>
-
-      {/* form */}
-      <form
-        onSubmit={handleSubmit}
-        className="mt-8 space-y-8 rounded-2xl bg-white/80 p-6 shadow-xl
-                   backdrop-blur-md dark:bg-zinc-900/50 dark:shadow-zinc-800"
+    <div className="relative isolate">
+      {/* soft radial bg */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br
+                      from-indigo-50 to-white dark:from-zinc-900 dark:to-zinc-800" />
+      <motion.main
+        initial={{ opacity: 0, y: 28 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="mx-auto max-w-2xl px-4 py-20"
       >
-        {/* sleep mins */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-            Avg. nightly in-bed minutes
-            <span className="ml-1 text-xs text-zinc-400">({sleepMin} min)</span>
-          </label>
-          <Slider
+        <Link href="/" className="text-sm text-indigo-600 hover:underline">
+          ← Home
+        </Link>
+
+        <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-zinc-800 dark:text-zinc-100">
+          Depression-risk predictor
+        </h1>
+        <p className="mt-2 text-lg text-zinc-600 dark:text-zinc-300">
+          Enter your averages from the <strong>past&nbsp;7 days</strong>; we’ll estimate
+          your <strong>4-year risk</strong> of developing clinically relevant
+          depressive symptoms.
+        </p>
+
+        {/* card */}
+        <form
+          onSubmit={handleSubmit}
+          className="mt-10 space-y-8 rounded-3xl border border-white/60
+                     bg-white/70 p-8 shadow-2xl backdrop-blur
+                     dark:border-white/10 dark:bg-zinc-900/60"
+        >
+          {/* sliders & fields */}
+          <SliderRow
+            label="Avg. nightly in-bed minutes"
+            value={sleepMin}
+            unit="min"
             min={240}
             max={960}
             step={10}
-            value={[sleepMin]}
-            onValueChange={(v) => setSleepMin(v[0])}
+            onChange={setSleepMin}
           />
-        </div>
-
-        {/* fragmentation */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-            Sleep-fragmentation index
-            <span className="ml-1 text-xs text-zinc-400">
-              ({fragmentation.toFixed(1)})
-            </span>
-          </label>
-          <Slider
+          <SliderRow
+            label="Sleep-fragmentation (interruptions ≥ 1 min)"
+            value={fragmentation}
+            unit=""
             min={0}
             max={10}
             step={0.1}
-            value={[fragmentation]}
-            onValueChange={(v) =>
-              setFragmentation(parseFloat(v[0].toFixed(1)))
-            }
+            onChange={(v) => setFragment(parseFloat(v.toFixed(1)))}
           />
-        </div>
-
-        {/* age */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-            Age <span className="ml-1 text-xs text-zinc-400">({age} y)</span>
-          </label>
-          <Slider
+          <SliderRow
+            label="Age"
+            value={age}
+            unit="y"
             min={18}
             max={90}
             step={1}
-            value={[age]}
-            onValueChange={(v) => setAge(v[0])}
+            onChange={setAge}
           />
-        </div>
-
-        {/* BMI */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-            Body-mass index
-            <span className="ml-1 text-xs text-zinc-400">
-              ({bmi.toFixed(1)})
-            </span>
-          </label>
-          <Slider
+          <SliderRow
+            label="Body-mass index"
+            value={bmi}
+            unit=""
             min={15}
             max={45}
             step={0.1}
-            value={[bmi]}
-            onValueChange={(v) => setBmi(parseFloat(v[0].toFixed(1)))}
+            onChange={(v) => setBmi(parseFloat(v.toFixed(1)))}
           />
-        </div>
 
-        {/* sex */}
-        <SelectField
-          label="Sex"
-          value={sex}
-          onChange={setSex}
-          items={[
-            { value: "M", label: "Male" },
-            { value: "F", label: "Female" },
-          ]}
-        />
+          {/* selects */}
+          <SelectField label="Sex" value={sex} onChange={setSex}
+            items={[{value:"M",label:"Male"},{value:"F",label:"Female"}]} />
+          <SelectField label="Smoking status" value={smoking} onChange={setSmoking}
+            items={[{value:"0",label:"Never"},{value:"1",label:"Former"},{value:"2",label:"Current"}]} />
+          <SelectField label="Alcohol consumption" value={alcohol} onChange={setAlcohol}
+            items={[{value:"0",label:"None"},{value:"1",label:"Low"},{value:"2",label:"High"}]} />
+          <SelectField label="Diabetes" value={diabetes} onChange={setDiabetes}
+            items={[{value:"0",label:"No"},{value:"1",label:"Yes"}]} />
 
-        {/* smoking */}
-        <SelectField
-          label="Smoking status"
-          value={smoking}
-          onChange={setSmoking}
-          items={[
-            { value: "0", label: "Never" },
-            { value: "1", label: "Former" },
-            { value: "2", label: "Current" },
-          ]}
-        />
+          {/* advanced */}
+          <Accordion type="single" collapsible>
+            <AccordionItem value="adv">
+              <AccordionTrigger className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                Advanced predictors (optional)
+              </AccordionTrigger>
+              <AccordionContent className="mt-6 space-y-6">
+                <SwitchRow
+                  label="Prior depression / antidepressant use"
+                  checked={anyVuln}
+                  onChange={setAnyVuln}
+                />
+                <SelectField
+                  label="Physical-activity level (past week) (optional)"
+                  value={activity}
+                  onChange={setActivity}
+                  placeholder="Select or skip"
+                  items={[
+                    { value: "low", label: "Low" },
+                    { value: "med", label: "Medium" },
+                    { value: "high", label: "High" },
+                  ]}
+                />
+                <SwitchRow
+                  label="History of neuropathy?"
+                  checked={neuropathy}
+                  onChange={setNeuropathy}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
-        {/* alcohol */}
-        <SelectField
-          label="Alcohol consumption"
-          value={alcohol}
-          onChange={setAlcohol}
-          items={[
-            { value: "0", label: "None" },
-            { value: "1", label: "Low" },
-            { value: "2", label: "High" },
-          ]}
-        />
+          {/* button */}
+          <motion.button
+            whileHover={{ scale: 1.02, boxShadow: "0 4px 20px rgba(99,102,241,.4)" }}
+            type="submit"
+            disabled={loading || !formValid()}
+            className="inline-flex w-full items-center justify-center rounded-xl
+                       bg-gradient-to-r from-indigo-500 to-indigo-600 px-5 py-2.5
+                       font-semibold text-white shadow
+                       hover:from-indigo-600 hover:to-indigo-700
+                       disabled:opacity-40 dark:from-indigo-400 dark:to-indigo-500
+                       dark:hover:from-indigo-500 dark:hover:to-indigo-600"
+          >
+            {loading ? "Scoring…" : "Predict risk"}
+          </motion.button>
+        </form>
 
-        {/* diabetes */}
-        <SelectField
-          label="Diabetes"
-          value={diabetes}
-          onChange={setDiabetes}
-          items={[
-            { value: "0", label: "No" },
-            { value: "1", label: "Yes" },
-          ]}
-        />
+        {/* result */}
+        {prob !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-10 rounded-2xl border border-indigo-100 bg-white/70 p-6
+                       shadow-lg backdrop-blur dark:border-indigo-900/40
+                       dark:bg-indigo-900/30"
+          >
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+              Estimated 4-year risk
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              {/* progress bar */}
+              <Progress value={prob * 100} className="h-3 flex-1" />
+              {/* chip */}
+              {(() => {
+                const [band, colour] = riskBand(prob);
+                return (
+                  <Badge
+                    className={`${colour} text-white shadow-sm hover:opacity-90`}
+                  >
+                    {band}
+                  </Badge>
+                );
+              })()}
+            </div>
+            <p className="mt-2 text-lg font-semibold text-zinc-800 dark:text-zinc-100">
+              {(prob * 100).toFixed(1)}%
+            </p>
+          </motion.div>
+        )}
 
-        {/* advanced accordion */}
-        <Accordion type="single" collapsible>
-          <AccordionItem value="adv">
-            <AccordionTrigger className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-              Advanced predictors (optional)
-            </AccordionTrigger>
-            <AccordionContent className="mt-6 space-y-6">
-              {/* prior depression */}
-              <SwitchRow
-                label="Prior depression / antidepressant use"
-                checked={anyVuln}
-                onChange={setAnyVuln}
-              />
-
-              {/* physical activity */}
-              <SelectField
-                label="Physical-activity level (past week) (optional)"
-                value={activity}
-                onChange={setActivity}
-                placeholder="Select or skip"
-                items={[
-                  { value: "low", label: "Low" },
-                  { value: "med", label: "Medium" },
-                  { value: "high", label: "High" },
-                ]}
-              />
-
-              {/* neuropathy */}
-              <SwitchRow
-                label="History of neuropathy?"
-                checked={neuropathy}
-                onChange={setNeuropathy}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-
-        {/* submit */}
-        <button
-          type="submit"
-          disabled={loading || !formValid()}
-          className="inline-flex w-full items-center justify-center rounded-xl
-                     bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 py-2
-                     font-medium text-white hover:from-indigo-600 hover:to-indigo-700
-                     disabled:opacity-40 dark:from-indigo-400 dark:to-indigo-500
-                     dark:hover:from-indigo-500 dark:hover:to-indigo-600"
-        >
-          {loading ? "Scoring…" : "Predict risk"}
-        </button>
-      </form>
-
-      {/* result */}
-      {prob !== null && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-8 rounded-lg border-l-4 border-indigo-600 bg-indigo-50 p-4
-                     text-indigo-800 dark:border-indigo-500 dark:bg-indigo-950/40
-                     dark:text-indigo-300"
-        >
-          <p className="text-lg font-semibold">
-            Estimated 4-year risk: {(prob * 100).toFixed(1)}%
-          </p>
-        </motion.div>
-      )}
-
-      {/* error */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-8 rounded-lg border-l-4 border-red-600 bg-red-50 p-4
-                     text-sm text-red-800 dark:border-red-500 dark:bg-red-900/40
-                     dark:text-red-300"
-        >
-          {error}
-        </motion.div>
-      )}
-    </motion.main>
+        {/* error */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-10 rounded-lg border-l-4 border-red-600 bg-red-50 p-4
+                       text-sm text-red-800 dark:border-red-500 dark:bg-red-900/40
+                       dark:text-red-300"
+          >
+            {error}
+          </motion.div>
+        )}
+      </motion.main>
+    </div>
   );
 }
 
-/* ————— reusable tiny components ————— */
+/* ——— tiny components ——— */
+
+function SliderRow({
+  label,
+  value,
+  unit,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
+        {label}
+        <span className="ml-1 text-xs text-zinc-400">
+          ({value.toFixed(step < 1 ? 1 : 0)} {unit})
+        </span>
+      </label>
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[value]}
+        onValueChange={(v) => onChange(v[0])}
+      />
+    </div>
+  );
+}
 
 function SelectField({
   label,
