@@ -8,6 +8,7 @@ from __future__ import annotations
 
 # ── std-lib ────────────────────────────────────────────────────────────────
 import os, sys, pathlib, warnings
+import math
 from typing import Optional, Dict, Any
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -32,6 +33,14 @@ API_KEY    = os.getenv("MODEL_API_KEY")
 ORIGINS    = os.getenv("CORS_ORIGINS", "*").split(",")
 
 warnings.filterwarnings("ignore", message=".*serialized model.*")
+
+# ---- Platt recalibration --------------------------------------------------
+# Original prevalence in the training cohort ≈ 19 %
+P_ORIG   = float(os.getenv("P_ORIG",   0.19))   # can override via env
+# Desired baseline prevalence (e.g. general population) = 8 %
+P_TARGET = float(os.getenv("P_TARGET", 0.08))
+
+LOGIT_SHIFT = math.log(P_TARGET / (1 - P_TARGET)) - math.log(P_ORIG / (1 - P_ORIG))
 
 # ── model load ─────────────────────────────────────────────────────────────
 
@@ -144,7 +153,7 @@ def build_feature_row(payload: Dict[str, Any]) -> pd.DataFrame:
 
     # ── normalise sex to binary ────────────────────────────────────────
     if isinstance((sv := payload.get("sex")), str):
-        payload["sex"] = 1 if sv.upper().startswith("M") else 0
+        payload["sex"] = 1 if sv.upper().startswith("M") else 2   # 1 = Male, 2 = Female
 
     # ── propagate any_vuln into underlying flags ───────────────────────
     if payload.get("any_vuln") is not None:
@@ -162,18 +171,40 @@ def build_feature_row(payload: Dict[str, Any]) -> pd.DataFrame:
     return feats.drop(columns=["LD_PHQ9depr_event"], errors="ignore")
 
 
-# ── endpoint ───────────────────────────────────────────────────────────────
 
+# ── endpoint ───────────────────────────────────────────────────────────────
 def _guard(key: str | None):
     if API_KEY and key != API_KEY:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
 
 @app.post("/score", response_model=ScoreResponse)
-def score(req: ScoreRequest, x_api_key: str | None = Header(None, alias="x-api-key")):
+def score(
+    req: ScoreRequest,
+    x_api_key: str | None = Header(None, alias="x-api-key"),
+):
     _guard(x_api_key)
-    feats = build_feature_row(req.model_dump())
-    prob  = float(model.predict_proba(feats)[:, 1][0])
+
+    # keep JSON payload around for later look-ups
+    payload = req.model_dump()
+
+    # build feature DF from *same* payload
+    feats = build_feature_row(payload)
+
+    # ── 1) raw model probability ───────────────────────────────────────────
+    p_raw = float(model.predict_proba(feats)[:, 1][0])
+
+    # ── 2) global Platt recalibration (shift mean from 19 % → 8 %) ─────────
+    logit_recal = math.log(p_raw / (1 - p_raw)) + LOGIT_SHIFT
+    prob = 1 / (1 + math.exp(-logit_recal))
+
+    # ── 3) optional U-shape penalty if user gave *no* vulnerability flag ───
+    if payload.get("any_vuln", 0) == 0:
+        sleep_cat = int(payload["sleep_dur2"])  # 1, 2, or 3
+        PENALTY = {1: -0.06, 2: 0.00, 3: +0.17}  # log-odds bumps
+        logit_adj = math.log(prob / (1 - prob)) + PENALTY[sleep_cat]
+        prob = 1 / (1 + math.exp(-logit_adj))
+
     return ScoreResponse(prob=prob)
 
 
