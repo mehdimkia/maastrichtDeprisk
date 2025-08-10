@@ -1,54 +1,26 @@
-/* web/src/app/page.tsx */
+/* web/src/app/page.tsx — Landing page with shared <SiteHeader/> */
+
 import Link from "next/link";
+import SiteHeader from "@/components/site-header";
 
 export const metadata = {
   title: "Maastricht Deprisk – Depression-risk Predictor",
   description:
-    "Research prototype that estimates ~4-year depression risk (PHQ-9 ≥ 10) from sleep, activity and lifestyle data.",
+    "Research prototype that estimates ~4-year depression risk (PHQ-9 ≥ 10) from wearable-derived sleep & activity metrics plus clinical covariates.",
 };
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
-      {/* --- NAVBAR ----------------------------------------------------------- */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between p-6">
-        <Link
-          href="/"
-          className="text-2xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-400"
-        >
-          Deprisk<span className="text-indigo-400">•</span>
-        </Link>
+      {/* Global header */}
+      <SiteHeader />
 
-        <nav className="hidden gap-6 md:flex">
-          <Link
-            href="/predict"
-            className="font-medium text-zinc-600 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
-          >
-            Predictor
-          </Link>
-          <Link
-            href="/powerbi"
-            className="font-medium text-zinc-600 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
-          >
-            Dashboard
-          </Link>
-          <a
-            href="https://github.com/mehdimkia/maastrichtDeprisk"
-            target="_blank"
-            className="font-medium text-zinc-600 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
-          >
-            GitHub
-          </a>
-        </nav>
-      </header>
-
-      {/* --- HERO ------------------------------------------------------------- */}
+      {/* HERO */}
       <section className="relative isolate overflow-hidden py-24 sm:py-32">
         <div
           className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,theme(colors.indigo.200)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,theme(colors.indigo.800)_0%,transparent_70%)]"
           aria-hidden="true"
         />
-
         <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
           <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-6xl">
             Predict depression risk before it manifests
@@ -81,7 +53,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- FEATURE STRIP ---------------------------------------------------- */}
+      {/* FEATURE STRIP */}
       <section className="mx-auto grid max-w-6xl gap-8 px-6 py-20 sm:grid-cols-3 lg:px-8">
         {[
           {
@@ -112,18 +84,18 @@ export default function Home() {
         ))}
       </section>
 
-      {/* --- FACT BAR --------------------------------------------------------- */}
+      {/* FACT BAR */}
       <section className="mx-auto -mt-8 max-w-6xl px-6 pb-10 text-center text-xs text-zinc-500 dark:text-zinc-400">
         Analytic cohort: <span className="font-medium">6,004 participants</span> ·{" "}
         <span className="font-medium">880 incident cases</span>.
       </section>
 
-      {/* --- FOOTER ----------------------------------------------------------- */}
+      {/* FOOTER */}
       <footer className="border-t border-zinc-200 bg-white py-6 text-center dark:border-zinc-700 dark:bg-zinc-900">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           © {new Date().getFullYear()} Maastricht Deprisk · MIT License
         </p>
-        <p className="text-xs mt-1 text-zinc-400">Research prototype — not a medical device.</p>
+        <p className="mt-1 text-xs text-zinc-400">Research prototype — not a medical device.</p>
       </footer>
     </main>
   );
