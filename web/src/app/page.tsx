@@ -2,9 +2,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Maastricht Deprisk – Depression‑risk Predictor",
+  title: "Maastricht Deprisk – Depression-risk Predictor",
   description:
-    "Research prototype that estimates two‑year depression risk from sleep, activity and lifestyle data.",
+    "Research prototype that estimates ~4-year depression risk (PHQ-9 ≥ 10) from sleep, activity and lifestyle data.",
 };
 
 export default function Home() {
@@ -51,16 +51,18 @@ export default function Home() {
 
         <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
           <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-6xl">
-            Predict depression risk&nbsp;before it manifests
+            Predict depression risk before it manifests
           </h1>
-         <p className="mx-auto mt-6 max-w-prose text-lg leading-8 text-zinc-600 dark:text-zinc-300">
-            Our model, an XGBoost ensemble built on {" "}
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                12 years of Maastricht Study data
-              </span>
-              , predicts someone’s risk of a major depressive episode from wearable‑derived sleep and activity metrics, plus clinical and sociodemographic covariates.
-            </p>
-
+          <p className="mx-auto mt-6 max-w-prose text-lg leading-8 text-zinc-600 dark:text-zinc-300">
+            Our model, a tuned gradient-boosted-trees (XGBoost) pipeline built on{" "}
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+              longitudinal data from The Maastricht Study (2010–2020 baseline)
+            </span>
+            , estimates the ~4-year risk of{" "}
+            <span className="font-medium">clinically relevant depressive symptoms (PHQ-9 ≥ 10)</span>{" "}
+            from wearable-derived sleep and activity metrics, plus clinical and sociodemographic
+            covariates.
+          </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
             <Link
@@ -84,18 +86,18 @@ export default function Home() {
         {[
           {
             emoji: "⚡️",
-            title: "Real‑time scoring",
-            text: "Sub‑200 ms latency via FastAPI + XGBoost ‘hist’ model.",
+            title: "Low-latency scoring",
+            text: "FastAPI + XGBoost ‘hist’ for fast, production-style inference.",
           },
           {
             emoji: "🛡️",
-            title: "Privacy‑first",
-            text: "No raw wearables data leaves your browser—only derived features are sent.",
+            title: "Privacy-first",
+            text: "Only derived fields leave your browser; raw Maastricht data remain on secure servers.",
           },
           {
             emoji: "📊",
             title: "Transparent metrics",
-            text: "AUROC 0.71 · AUPRC 0.29 on a hold‑out sample of 1 200 participants.",
+            text: "AUROC 0.71 · AUPRC 0.29 on a hold-out test set of 2,789 records (train = 11,153).",
           },
         ].map((f) => (
           <div key={f.title} className="text-center">
@@ -110,11 +112,18 @@ export default function Home() {
         ))}
       </section>
 
+      {/* --- FACT BAR --------------------------------------------------------- */}
+      <section className="mx-auto -mt-8 max-w-6xl px-6 pb-10 text-center text-xs text-zinc-500 dark:text-zinc-400">
+        Analytic cohort: <span className="font-medium">6,004 participants</span> ·{" "}
+        <span className="font-medium">880 incident cases</span>.
+      </section>
+
       {/* --- FOOTER ----------------------------------------------------------- */}
       <footer className="border-t border-zinc-200 bg-white py-6 text-center dark:border-zinc-700 dark:bg-zinc-900">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          © {new Date().getFullYear()} Maastricht Deprisk · MIT License
+          © {new Date().getFullYear()} Maastricht Deprisk · MIT License
         </p>
+        <p className="text-xs mt-1 text-zinc-400">Research prototype — not a medical device.</p>
       </footer>
     </main>
   );
