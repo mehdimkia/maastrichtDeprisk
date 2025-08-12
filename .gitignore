@@ -12,6 +12,11 @@
 !.yarn/releases
 !.yarn/versions
 
+# IDEs
+.idea/
+.vscode/
+*.iml
+
 # testing
 /coverage
 
