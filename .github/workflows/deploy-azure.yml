@@ -17,12 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write           # push to GHCR
+      packages: write      # push to GHCR
       id-token: write
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/deprisk-api:${{ github.sha }}
       RESOURCE_GROUP: rg-deprisk
-      LOCATION: northeurope            # <--- change if your tenant blocks this region
+      LOCATION: northeurope          # ← if policy blocks this, try francecentral or germanywestcentral
       ENV_NAME: cae-deprisk
       LOG_WS: law-deprisk
       APP_NAME: deprisk-api
@@ -42,6 +42,11 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Azure CLI versions (debug)
+        run: |
+          az version
+          az extension list -o table || true
+
       - name: Ensure Container Apps extension
         run: az extension add -n containerapp --upgrade
 
@@ -54,8 +59,8 @@ jobs:
           az monitor log-analytics workspace create -g "$RESOURCE_GROUP" -n "$LOG_WS" -l "$LOCATION" || true
           LOG_ID=$(az monitor log-analytics workspace show -g "$RESOURCE_GROUP" -n "$LOG_WS" --query customerId -o tsv)
           LOG_KEY=$(az monitor log-analytics workspace get-shared-keys -g "$RESOURCE_GROUP" -n "$LOG_WS" --query primarySharedKey -o tsv)
-          echo "LOG_ID=$LOG_ID" >> $GITHUB_ENV
-          echo "LOG_KEY=$LOG_KEY" >> $GITHUB_ENV
+          echo "LOG_ID=$LOG_ID"   >> "$GITHUB_ENV"
+          echo "LOG_KEY=$LOG_KEY" >> "$GITHUB_ENV"
 
       - name: Create Container Apps Environment (idempotent)
         run: |
@@ -73,7 +78,7 @@ jobs:
               --min-replicas 0 --max-replicas 2 \
               --cpu 0.25 --memory 0.5Gi \
               --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib \
-                         MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} \
+                         MODEL_API_KEY="${{ secrets.MODEL_API_KEY }}" \
                          CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
               --registry-server ghcr.io \
               --registry-username ${{ github.actor }} \
@@ -87,7 +92,7 @@ jobs:
               --min-replicas 0 --max-replicas 2 \
               --cpu 0.25 --memory 0.5Gi \
               --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib \
-                         MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} \
+                         MODEL_API_KEY="${{ secrets.MODEL_API_KEY }}" \
                          CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
               --registry-server ghcr.io \
               --registry-username ${{ github.actor }} \
