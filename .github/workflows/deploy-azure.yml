@@ -1,105 +1,54 @@
-name: ci(azure): build FastAPI image to GHCR and deploy to Azure Container Apps
-
+name: deploy-azure-aca
 on:
   push:
-    branches: [ main ]
     paths:
       - 'api/**'
       - '.github/workflows/deploy-azure.yml'
-  workflow_dispatch:
-
-concurrency:
-  group: deploy-azure-aca
-  cancel-in-progress: true
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write      # push to GHCR
+      packages: write
       id-token: write
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/deprisk-api:${{ github.sha }}
       RESOURCE_GROUP: rg-deprisk
-      LOCATION: northeurope          # ← if policy blocks this, try francecentral or germanywestcentral
+      LOCATION: northeurope
       ENV_NAME: cae-deprisk
-      LOG_WS: law-deprisk
       APP_NAME: deprisk-api
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Build & push image to GHCR
         run: |
           echo "${{ github.token }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker build -t "$IMAGE" api
-          docker push "$IMAGE"
+          docker build -t $IMAGE api
+          docker push $IMAGE
 
       - name: Azure login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Azure CLI versions (debug)
-        run: |
-          az version
-          az extension list -o table || true
-
       - name: Ensure Container Apps extension
         run: az extension add -n containerapp --upgrade
 
-      - name: Create resource group (idempotent)
-        run: az group create -n "$RESOURCE_GROUP" -l "$LOCATION"
-
-      - name: Create Log Analytics workspace (explicit region)
+      - name: Provision env & deploy app
         run: |
-          az provider register --namespace Microsoft.OperationalInsights --wait
-          az monitor log-analytics workspace create -g "$RESOURCE_GROUP" -n "$LOG_WS" -l "$LOCATION" || true
-          LOG_ID=$(az monitor log-analytics workspace show -g "$RESOURCE_GROUP" -n "$LOG_WS" --query customerId -o tsv)
-          LOG_KEY=$(az monitor log-analytics workspace get-shared-keys -g "$RESOURCE_GROUP" -n "$LOG_WS" --query primarySharedKey -o tsv)
-          echo "LOG_ID=$LOG_ID"   >> "$GITHUB_ENV"
-          echo "LOG_KEY=$LOG_KEY" >> "$GITHUB_ENV"
-
-      - name: Create Container Apps Environment (idempotent)
-        run: |
-          az provider register --namespace Microsoft.App --wait
-          az containerapp env create \
-            -n "$ENV_NAME" -g "$RESOURCE_GROUP" -l "$LOCATION" \
-            --logs-workspace-id "$LOG_ID" --logs-workspace-key "$LOG_KEY" || true
-
-      - name: Create or update Container App
-        run: |
-          if az containerapp show -n "$APP_NAME" -g "$RESOURCE_GROUP" > /dev/null 2>&1; then
-            az containerapp update \
-              -n "$APP_NAME" -g "$RESOURCE_GROUP" \
-              --image "$IMAGE" \
-              --min-replicas 0 --max-replicas 2 \
-              --cpu 0.25 --memory 0.5Gi \
-              --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib \
-                         MODEL_API_KEY="${{ secrets.MODEL_API_KEY }}" \
-                         CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
-              --registry-server ghcr.io \
-              --registry-username ${{ github.actor }} \
-              --registry-password ${{ github.token }}
-          else
-            az containerapp create \
-              -n "$APP_NAME" -g "$RESOURCE_GROUP" \
-              --environment "$ENV_NAME" \
-              --image "$IMAGE" \
-              --ingress external --target-port 8000 \
-              --min-replicas 0 --max-replicas 2 \
-              --cpu 0.25 --memory 0.5Gi \
-              --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib \
-                         MODEL_API_KEY="${{ secrets.MODEL_API_KEY }}" \
-                         CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
-              --registry-server ghcr.io \
-              --registry-username ${{ github.actor }} \
-              --registry-password ${{ github.token }}
-          fi
-
-      - name: Show public URL
-        run: |
-          FQDN=$(az containerapp show -n "$APP_NAME" -g "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)
-          echo "API URL: https://$FQDN"
+          az group create -n $RESOURCE_GROUP -l $LOCATION
+          az containerapp env create -n $ENV_NAME -g $RESOURCE_GROUP -l $LOCATION || true
+          az containerapp up \
+            --name $APP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --environment $ENV_NAME \
+            --image $IMAGE \
+            --ingress external --target-port 8000 \
+            --min-replicas 0 --max-replicas 2 \
+            --cpu 0.25 --memory 0.5Gi \
+            --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib \
+                       MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} \
+                       CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
+            --registry-server ghcr.io \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ github.token }}
