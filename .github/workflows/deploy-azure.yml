@@ -14,7 +14,7 @@ jobs:
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/deprisk-api:${{ github.sha }}
       RESOURCE_GROUP: rg-deprisk
-      LOCATION: eastus  # Changed to a commonly allowed region
+      LOCATION: westeurope  # Use existing resource group location
       ENV_NAME: cae-deprisk
       APP_NAME: deprisk-api
     steps:
@@ -34,36 +34,76 @@ jobs:
       - name: Ensure Container Apps extension
         run: az extension add -n containerapp --upgrade
 
-      - name: Create resource group
+      - name: Find or create Log Analytics workspace
         run: |
-          az group create -n $RESOURCE_GROUP -l $LOCATION || true
+          # Try to find existing workspace in the resource group
+          EXISTING_WORKSPACE=$(az monitor log-analytics workspace list --resource-group $RESOURCE_GROUP --query "[0].name" --output tsv 2>/dev/null || echo "")
+          
+          if [ ! -z "$EXISTING_WORKSPACE" ] && [ "$EXISTING_WORKSPACE" != "null" ]; then
+            echo "Found existing workspace: $EXISTING_WORKSPACE"
+            echo "WORKSPACE_NAME=$EXISTING_WORKSPACE" >> $GITHUB_ENV
+            WORKSPACE_ID=$(az monitor log-analytics workspace show --resource-group $RESOURCE_GROUP --workspace-name $EXISTING_WORKSPACE --query "id" --output tsv)
+            echo "WORKSPACE_ID=$WORKSPACE_ID" >> $GITHUB_ENV
+          else
+            echo "No existing workspace found. Will try to create Container Apps environment without explicit workspace."
+            echo "WORKSPACE_NAME=" >> $GITHUB_ENV
+            echo "WORKSPACE_ID=" >> $GITHUB_ENV
+          fi
 
       - name: Create Container Apps environment
         run: |
-          az containerapp env create \
-            --name $ENV_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --location $LOCATION || true
+          if [ ! -z "$WORKSPACE_ID" ]; then
+            echo "Creating environment with existing workspace"
+            az containerapp env create \
+              --name $ENV_NAME \
+              --resource-group $RESOURCE_GROUP \
+              --location $LOCATION \
+              --logs-workspace-id $WORKSPACE_ID || echo "Environment may already exist"
+          else
+            echo "Creating environment (may fail due to policy - will try containerapp up instead)"
+            az containerapp env create \
+              --name $ENV_NAME \
+              --resource-group $RESOURCE_GROUP \
+              --location $LOCATION || echo "Environment creation failed, will use containerapp up"
+          fi
 
       - name: Deploy Container App
         run: |
-          az containerapp create \
-            --name $APP_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --environment $ENV_NAME \
-            --image $IMAGE \
-            --ingress external \
-            --target-port 8000 \
-            --min-replicas 0 \
-            --max-replicas 2 \
-            --cpu 0.25 \
-            --memory 0.5Gi \
-            --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
-            --registry-server ghcr.io \
-            --registry-username ${{ github.actor }} \
-            --registry-password ${{ github.token }} || \
-          az containerapp update \
-            --name $APP_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --image $IMAGE \
-            --set-env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com
+          # Check if environment exists
+          ENV_EXISTS=$(az containerapp env show --name $ENV_NAME --resource-group $RESOURCE_GROUP --query "name" --output tsv 2>/dev/null || echo "")
+          
+          if [ ! -z "$ENV_EXISTS" ]; then
+            echo "Environment exists, deploying app"
+            az containerapp create \
+              --name $APP_NAME \
+              --resource-group $RESOURCE_GROUP \
+              --environment $ENV_NAME \
+              --image $IMAGE \
+              --ingress external \
+              --target-port 8000 \
+              --min-replicas 0 \
+              --max-replicas 2 \
+              --cpu 0.25 \
+              --memory 0.5Gi \
+              --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
+              --registry-server ghcr.io \
+              --registry-username ${{ github.actor }} \
+              --registry-password ${{ github.token }} 2>/dev/null || \
+            az containerapp update \
+              --name $APP_NAME \
+              --resource-group $RESOURCE_GROUP \
+              --image $IMAGE \
+              --set-env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com
+          else
+            echo "Environment doesn't exist, using containerapp up (creates everything)"
+            az containerapp up \
+              --name $APP_NAME \
+              --resource-group $RESOURCE_GROUP \
+              --location $LOCATION \
+              --image $IMAGE \
+              --ingress external --target-port 8000 \
+              --env-vars MODEL_PATH=/app/models/Week7_xgb_onehot_interactions.joblib MODEL_API_KEY=${{ secrets.MODEL_API_KEY }} CORS_ORIGINS=https://maastrichtdeprisk.mehdimirkia.com \
+              --registry-server ghcr.io \
+              --registry-username ${{ github.actor }} \
+              --registry-password ${{ github.token }}
+          fi
