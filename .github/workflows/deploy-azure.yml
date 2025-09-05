@@ -12,11 +12,11 @@ jobs:
       packages: write
       id-token: write
     env:
-      IMAGE: ghcr.io/${{ github.repository_owner }}/deprisk-api:${{ github.sha }}
-      RESOURCE_GROUP: rg-deprisk
-      LOCATION: northeurope
-      ENV_NAME: cae-deprisk
-      APP_NAME: deprisk-api
+        IMAGE: ghcr.io/${{ github.repository_owner }}/deprisk-api:${{ github.sha }}
+        RESOURCE_GROUP: rg-deprisk
+        LOCATION: westeurope  
+        ENV_NAME: cae-deprisk
+        APP_NAME: deprisk-api
     steps:
       - uses: actions/checkout@v4
 
