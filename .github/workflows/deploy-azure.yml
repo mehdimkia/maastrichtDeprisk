@@ -14,7 +14,7 @@ jobs:
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/deprisk-api:${{ github.sha }}
       RESOURCE_GROUP: rg-deprisk
-      LOCATION: westeurope  # Use existing resource group location
+      LOCATION: francecentral  # Use existing resource group location
       ENV_NAME: cae-deprisk
       APP_NAME: deprisk-api
     steps:
