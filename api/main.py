@@ -41,6 +41,21 @@ ORIGINS    = os.getenv("CORS_ORIGINS", "*").split(",")
 
 warnings.filterwarnings("ignore", message=".*serialized model.*")
 
+logging.getLogger("uvicorn.error").info(
+    f"sklearn={sklearn.__version__} xgboost={xgboost.__version__}"
+)
+# --- compat shim for legacy XGBoost pickles on newer scikit-learn ---
+import xgboost as xgb
+
+# Provide __sklearn_tags__ if XGB wrappers don't have it
+if not hasattr(xgb.XGBClassifier, "__sklearn_tags__"):
+    xgb.XGBClassifier.__sklearn_tags__ = lambda self: {}
+if hasattr(xgb, "XGBRegressor") and not hasattr(xgb.XGBRegressor, "__sklearn_tags__"):
+    xgb.XGBRegressor.__sklearn_tags__ = lambda self: {}
+
+
+
+
 
 
 # ---- Platt recalibration --------------------------------------------------
