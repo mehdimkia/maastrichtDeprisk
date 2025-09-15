@@ -11,9 +11,12 @@ import os, sys, pathlib, warnings
 import math
 from typing import Optional, Dict, Any
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-for p in (ROOT, ROOT / "src", ROOT / "src/production"):
-    sys.path.insert(0, str(p))
+#Trying to selfcontain api folder
+# ROOT = pathlib.Path(__file__).resolve().parent.parent
+# for p in (ROOT, ROOT / "src", ROOT / "src/production"):
+#     sys.path.insert(0, str(p))
+ROOT = pathlib.Path(__file__).resolve().parent  # api/
+
 
 # ── third-party ────────────────────────────────────────────────────────────
 import pandas as pd, numpy as np, joblib, uvicorn, xgboost as xgb
@@ -24,13 +27,15 @@ from fastapi.responses import PlainTextResponse
 
 
 # ── local helpers ──────────────────────────────────────────────────────────
-try:
-    from feature_engineering_interactions import build_feature_df  # type: ignore
-except ModuleNotFoundError:
-    from production.feature_engineering_interactions import build_feature_df  # type: ignore
+# try:
+#     from feature_engineering_interactions import build_feature_df  # type: ignore
+# except ModuleNotFoundError:
+#     from production.feature_engineering_interactions import build_feature_df  # type: ignore
+from lib.feature_engineering_interactions import build_feature_df
 
 # ── config ────────────────────────────────────────────────────────────────
 MODEL_PATH = os.getenv("MODEL_PATH", ROOT / "models/Week7_xgb_onehot_interactions.joblib")
+
 API_KEY    = os.getenv("MODEL_API_KEY")
 ORIGINS    = os.getenv("CORS_ORIGINS", "*").split(",")
 
