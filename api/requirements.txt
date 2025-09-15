@@ -1,6 +1,7 @@
 fastapi==0.111.*
 uvicorn[standard]==0.29.*
-pandas==2.*
-joblib==1.*
-scikit-learn==1.6.1     # only if your pipeline needs it
-xgboost==1.7.3        # same version used in training
+pandas==2.3.1
+joblib==1.5.1
+scikit-learn==1.6.1
+xgboost==1.7.3
+numpy==2.0.0  # Add this for consistency

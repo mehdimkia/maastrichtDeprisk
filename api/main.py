@@ -50,7 +50,7 @@ except ModuleNotFoundError:
 # ── config ────────────────────────────────────────────────────────────────
 MODEL_PATH = os.getenv(
     "MODEL_PATH",
-    str(ROOT / "models" / "Week7_xgb_onehot_interactions.joblib"),
+    str(ROOT / "models" / "Week8_xgb_onehot_interactions.joblib"),
 )
 
 API_KEY = os.getenv("MODEL_API_KEY")
