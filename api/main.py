@@ -21,6 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parent  # api/
 
 # ── third-party ────────────────────────────────────────────────────────────
 import pandas as pd, numpy as np, joblib, uvicorn, xgboost as xgb
+import sklearn
 from fastapi import FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -46,7 +47,7 @@ logging.getLogger("uvicorn.error").info(
     f"sklearn={sklearn.__version__} xgboost={xgboost.__version__}"
 )
 # --- compat shim for legacy XGBoost pickles on newer scikit-learn ---
-import xgboost as xgb
+
 
 # Provide __sklearn_tags__ if XGB wrappers don't have it
 if not hasattr(xgb.XGBClassifier, "__sklearn_tags__"):
