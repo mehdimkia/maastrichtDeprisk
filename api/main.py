@@ -8,6 +8,7 @@ from __future__ import annotations
 
 # ── std-lib ────────────────────────────────────────────────────────────────
 import os, sys, pathlib, warnings
+import logging
 import math
 from typing import Optional, Dict, Any
 
