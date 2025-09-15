@@ -34,8 +34,6 @@ ORIGINS    = os.getenv("CORS_ORIGINS", "*").split(",")
 
 warnings.filterwarnings("ignore", message=".*serialized model.*")
 
-@app.get("/health")
-def health(): return {"ok": True}
 
 
 # ---- Platt recalibration --------------------------------------------------
