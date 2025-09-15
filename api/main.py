@@ -20,6 +20,8 @@ import pandas as pd, numpy as np, joblib, uvicorn, xgboost as xgb
 from fastapi import FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from fastapi.responses import PlainTextResponse
+
 
 # ── local helpers ──────────────────────────────────────────────────────────
 try:
@@ -209,6 +211,18 @@ def score(
 
     return ScoreResponse(prob=prob)
 
+# --- health & root probes (Render expects 200) ---
+@app.get("/health", include_in_schema=False)
+def health():
+    return {"ok": True}
+
+@app.get("/", include_in_schema=False)
+def root():
+    return {"ok": True}
+
+@app.head("/", include_in_schema=False)
+def root_head():
+    return PlainTextResponse("", status_code=200)
 
 # ── local dev ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
