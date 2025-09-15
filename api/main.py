@@ -34,6 +34,10 @@ ORIGINS    = os.getenv("CORS_ORIGINS", "*").split(",")
 
 warnings.filterwarnings("ignore", message=".*serialized model.*")
 
+@app.get("/health")
+def health(): return {"ok": True}
+
+
 # ---- Platt recalibration --------------------------------------------------
 # Original prevalence in the training cohort ≈ 19 %
 P_ORIG   = float(os.getenv("P_ORIG",   0.19))   # can override via env
