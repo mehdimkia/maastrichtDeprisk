@@ -73,15 +73,33 @@ export default function CohortKPIPage() {
   const [filters, setFilters] = useState<Filters>({ sex: "All", ageBand: "All", diabetes: "All" });
   const [metric, setMetric] = useState<HeatmapMetric>("Incident Rate");
 
-  // Robust CSV loader: fetch text -> Papa.parse (avoids null/undefined edge cases in some environments)
+  // Robust CSV loader: try multiple candidate paths (env override → /data/... → /deprisk_synth_6004.csv)
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
+      const CSV_PATH = process.env.NEXT_PUBLIC_CSV_PATH ?? "/data/deprisk_synth_6004.csv";
+      const candidates = [CSV_PATH, "/deprisk_synth_6004.csv"]; // NOTE: /public/* is not a runtime URL
+      const attempts: string[] = [];
+
       try {
-        const res = await fetch("/data/deprisk_synth_6004.csv", { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = await res.text();
+        let text: string | null = null;
+        let lastStatus = 0;
+        for (const url of candidates) {
+          attempts.push(url);
+          try {
+            const res = await fetch(url, { cache: "no-store" });
+            lastStatus = res.status;
+            if (res.ok) {
+              text = await res.text();
+              break;
+            }
+          } catch (e) {
+            // continue to next candidate
+          }
+        }
+        if (!text) throw new Error(`HTTP ${attempts.length ? `tried ${attempts.join(" → ")}` : "no path"}`);
+
         const parsed = Papa.parse<Row>(text, { header: true, dynamicTyping: true, skipEmptyLines: true });
         const data = Array.isArray(parsed.data) ? parsed.data.filter(Boolean) : [];
 
@@ -99,7 +117,12 @@ export default function CohortKPIPage() {
 
         if (!cancelled) setRows(data);
       } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Failed to load CSV");
+        if (!cancelled)
+          setError(
+            (e?.message || "Failed to load CSV") +
+              "
+Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served at /data/deprisk_synth_6004.csv."
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
