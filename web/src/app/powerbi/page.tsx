@@ -118,11 +118,8 @@ export default function CohortKPIPage() {
         if (!cancelled) setRows(data);
       } catch (e: any) {
         if (!cancelled)
-          setError(
-            (e?.message || "Failed to load CSV") +
-              "
-Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served at /data/deprisk_synth_6004.csv."
-          );
+          setError(`${e?.message || "Failed to load CSV"}
+Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served at /data/deprisk_synth_6004.csv.`);
       } finally {
         if (!cancelled) setLoading(false);
       }
