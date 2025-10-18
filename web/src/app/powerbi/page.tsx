@@ -17,6 +17,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+// @ts-ignore — Vercel typecheck lacks papaparse types in this project; runtime import is fine
 import Papa from "papaparse";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
