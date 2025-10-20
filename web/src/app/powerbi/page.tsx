@@ -5,14 +5,10 @@
  * Purpose
  * - Client-side cohort dashboard using a static CSV in /public/data/
  * - Slicers (sex, age group, diabetes), KPIs, heatmap, Top-3 by lift, narrative
- * - Robust CSV loading (fixes null/undefined parse cases causing "Cannot read properties of null (reading '_')")
+ * - Robust CSV loading (null/undefined guards)
  *
  * Deps
  *   pnpm add echarts echarts-for-react papaparse
- *
- * Data contract (columns)
- *   id, incident_depression (0/1), sleep_duration_cat (<7h|7–9h|≥9h), frag_quartile (Q1..Q4),
- *   age, sex (M|F), diabetes (categorical: None|Prediabetes|Type 2)
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -79,7 +75,7 @@ export default function CohortKPIPage() {
     const load = async () => {
       setLoading(true);
       const CSV_PATH = process.env.NEXT_PUBLIC_CSV_PATH ?? "/data/deprisk_synth_6004.csv";
-      const candidates = [CSV_PATH, "/deprisk_synth_6004.csv"]; // NOTE: /public/* is not a runtime URL
+      const candidates = [CSV_PATH, "/deprisk_synth_6004.csv"];
       const attempts: string[] = [];
 
       try {
@@ -173,19 +169,33 @@ export default function CohortKPIPage() {
   const longSleepRate =
     filtered.filter((r) => r.sleep_duration_cat === "≥9h").length / Math.max(1, population);
 
-  // Matrix cells (Incident Rate or Case Share per cell)
+  // Matrix cells (Incident Rate or Case Share per cell), with extra dims for tooltip:
+  // value shape: [xIdx, yIdx, metricVal, cellPop, cellCases, cellInc, cellPopShare, cellCaseShare]
   const matrix = useMemo(() => {
     return FRAG_QS.flatMap((fq, i) =>
       SLEEP_CATS.map((sc, j) => {
         const cell = filtered.filter((r) => r.frag_quartile === fq && r.sleep_duration_cat === sc);
         const cPop = cell.length;
         const cCases = cell.reduce((s, r) => s + to01(r.incident_depression), 0);
-        const val = metric === "Incident Rate" ? (cPop ? cCases / cPop : 0) : cCases / Math.max(1, all.totalCases);
-        const safe = Number.isFinite(val) && !Number.isNaN(val) ? val : 0;
-        return [j, i, safe] as [number, number, number];
+        const cInc = cPop ? cCases / cPop : 0;
+        const metricVal =
+          metric === "Incident Rate" ? cInc : cCases / Math.max(1, all.totalCases);
+        const safe = Number.isFinite(metricVal) && !Number.isNaN(metricVal) ? metricVal : 0;
+        const cPopShare = cPop / Math.max(1, all.totalPop);
+        const cCaseShare = cCases / Math.max(1, all.totalCases);
+        return [j, i, safe, cPop, cCases, cInc, cPopShare, cCaseShare] as [
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number
+        ];
       })
     );
-  }, [filtered, metric, all.totalCases]);
+  }, [filtered, metric, all.totalCases, all.totalPop]);
 
   // Top-3 segments by Lift (based on IR)
   const top3 = useMemo(() => {
@@ -216,7 +226,7 @@ export default function CohortKPIPage() {
       )}×; ${pct(top3[0].popShare)} of cohort; ${pct(top3[0].caseShare)} of cases).`
     : "";
 
-  // ECharts config (render only when data present)
+  // ECharts config
   const MAX_IR = 0.35; // fixed scale for visual stability
   const heatmapOption = useMemo(
     () => ({
@@ -225,12 +235,39 @@ export default function CohortKPIPage() {
         formatter: (p: any) => {
           const sc = SLEEP_CATS[p.value[0]];
           const fq = FRAG_QS[p.value[1]];
-          return `${fq} × ${sc}<br/>${metric}: ${pct(p.value[2])}`;
+          const cPop = p.value[3] as number;
+          const cCases = p.value[4] as number;
+          const inc = p.value[5] as number; // incidence (cell)
+          const cPopShare = p.value[6] as number;
+          const cCaseShare = p.value[7] as number;
+          return [
+            `${fq} × ${sc}`,
+            `Incidence: ${pct(inc)}`,
+            `Cases: ${num(cCases)} / ${num(cPop)}`,
+            `Cohort share: ${pct(cPopShare)}`,
+            `Share of cases: ${pct(cCaseShare)}`,
+          ].join("<br/>");
         },
       },
-      grid: { left: 70, right: 90, bottom: 50, top: 40 },
-      xAxis: { type: "category", data: SLEEP_CATS, axisLabel: { interval: 0 } },
-      yAxis: { type: "category", data: FRAG_QS },
+      // Give the visualMap room on the right; it sits outside the plotting area
+      grid: { left: 70, right: 90, bottom: 60, top: 40 },
+      xAxis: {
+        type: "category",
+        data: SLEEP_CATS,
+        axisLabel: { interval: 0 },
+        name: "Sleep duration",
+        nameLocation: "middle",
+        nameGap: 35,
+        nameTextStyle: { fontSize: 12, color: "#4b5563" },
+      },
+      yAxis: {
+        type: "category",
+        data: FRAG_QS,
+        name: "Sleep fragmentation (Q1 low → Q4 high)",
+        nameLocation: "middle",
+        nameGap: 55,
+        nameTextStyle: { fontSize: 12, color: "#4b5563" },
+      },
       visualMap: {
         min: 0,
         max: metric === "Incident Rate" ? MAX_IR : 0.35,
@@ -243,8 +280,22 @@ export default function CohortKPIPage() {
         {
           type: "heatmap",
           data: matrix,
-          label: { show: true, formatter: (p: any) => pct(p.value[2]) },
-          emphasis: { itemStyle: { shadowBlur: 10 } },
+          // Higher-contrast labels with a subtle white outline ("halo")
+          label: {
+            show: true,
+            formatter: (p: any) => pct(p.value[2]),
+            color: "#111827", // slate-900
+            fontWeight: 600,
+            textBorderColor: "rgba(255,255,255,0.95)",
+            textBorderWidth: 2,
+          },
+          // Keep labels readable on hover
+          emphasis: {
+            itemStyle: { shadowBlur: 10 },
+            label: {
+              show: true,
+            },
+          },
         },
       ],
     }),
@@ -380,7 +431,7 @@ export default function CohortKPIPage() {
         <KPI title="Long sleepers (≥9h)" value={pct(longSleepRate)} />
       </section>
 
-      {/* Heatmap (render only when data present to avoid ECharts touching null state) */}
+      {/* Heatmap */}
       <section className="rounded-2xl bg-white p-3 shadow space-y-3">
         {all.totalPop > 0 ? (
           <ReactECharts option={heatmapOption as any} style={{ height: 520 }} notMerge lazyUpdate />
