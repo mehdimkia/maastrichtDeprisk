@@ -4,11 +4,11 @@
  *
  * Purpose
  * - Client-side cohort dashboard using a static CSV in /public/data/
- * - Slicers (sex, age band, diabetes), KPIs, heatmap, Top‑3 by lift, narrative
+ * - Slicers (sex, age group, diabetes), KPIs, heatmap, Top-3 by lift, narrative
  * - Robust CSV loading (fixes null/undefined parse cases causing "Cannot read properties of null (reading '_')")
  *
  * Deps
- *   npm i echarts echarts-for-react papaparse
+ *   pnpm add echarts echarts-for-react papaparse
  *
  * Data contract (columns)
  *   id, incident_depression (0/1), sleep_duration_cat (<7h|7–9h|≥9h), frag_quartile (Q1..Q4),
@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-// @ts-ignore — Vercel typecheck lacks papaparse types in this project; runtime import is fine
+// @ts-ignore — Vercel typecheck may lack papaparse types in this project; runtime import is fine
 import Papa from "papaparse";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
@@ -84,21 +84,19 @@ export default function CohortKPIPage() {
 
       try {
         let text: string | null = null;
-        let lastStatus = 0;
         for (const url of candidates) {
           attempts.push(url);
           try {
             const res = await fetch(url, { cache: "no-store" });
-            lastStatus = res.status;
             if (res.ok) {
               text = await res.text();
               break;
             }
-          } catch (e) {
+          } catch {
             // continue to next candidate
           }
         }
-        if (!text) throw new Error(`HTTP ${attempts.length ? `tried ${attempts.join(" → ")}` : "no path"}`);
+        if (!text) throw new Error(`HTTP error — tried ${attempts.join(" → ")}`);
 
         const parsed = Papa.parse<Row>(text, { header: true, dynamicTyping: true, skipEmptyLines: true });
         const data = Array.isArray(parsed.data) ? parsed.data.filter(Boolean) : [];
@@ -118,8 +116,9 @@ export default function CohortKPIPage() {
         if (!cancelled) setRows(data);
       } catch (e: any) {
         if (!cancelled)
-          setError(`${e?.message || "Failed to load CSV"}
-Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served at /data/deprisk_synth_6004.csv.`);
+          setError(
+            `${e?.message || "Failed to load CSV"}\nEnsure the CSV is available at web/public/data/deprisk_synth_6004.csv → served at /data/deprisk_synth_6004.csv.`
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -229,16 +228,16 @@ Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served
           return `${fq} × ${sc}<br/>${metric}: ${pct(p.value[2])}`;
         },
       },
-      grid: { left: 70, right: 30, bottom: 50, top: 40 },
+      grid: { left: 70, right: 90, bottom: 50, top: 40 },
       xAxis: { type: "category", data: SLEEP_CATS, axisLabel: { interval: 0 } },
       yAxis: { type: "category", data: FRAG_QS },
       visualMap: {
         min: 0,
         max: metric === "Incident Rate" ? MAX_IR : 0.35,
         calculable: false,
-        orient: "horizontal",
-        left: "center",
-        bottom: 0,
+        orient: "vertical",
+        right: 10,
+        top: 20,
       },
       series: [
         {
@@ -279,7 +278,13 @@ Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served
     );
     // 3) IR with no filters equals overall IR (within tolerance)
     const tol = 1e-6;
-    console.assert(Math.abs(ir - all.overallIR) < tol || filters.sex !== "All" || filters.ageBand !== "All" || filters.diabetes !== "All", "IR should equal overall IR when no filters are applied");
+    console.assert(
+      Math.abs(ir - all.overallIR) < tol ||
+        filters.sex !== "All" ||
+        filters.ageBand !== "All" ||
+        filters.diabetes !== "All",
+      "IR should equal overall IR when no filters are applied"
+    );
     // 4) Diabetes options include at least 3 categories
     console.assert(diabetesOptions.length >= 4, `Unexpected diabetes options: ${diabetesOptions.join(", ")}`);
   }, [loading, error, all.totalPop, all.overallIR, top3, matrix.length, ir, filters, diabetesOptions]);
@@ -291,7 +296,7 @@ Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served
   if (loading) {
     return (
       <main className="mx-auto max-w-6xl p-6 space-y-6">
-        <h1 className="text-2xl font-semibold">Cohort KPI (Synthetic)</h1>
+        <h1 className="text-2xl font-semibold">Cohort Dashboard</h1>
         <p className="text-neutral-600">Loading data…</p>
         <div className="h-64 animate-pulse rounded-2xl bg-neutral-100" />
       </main>
@@ -301,21 +306,27 @@ Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served
   if (error) {
     return (
       <main className="mx-auto max-w-6xl p-6 space-y-6">
-        <h1 className="text-2xl font-semibold">Cohort KPI (Synthetic)</h1>
-        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">{error}</p>
-        <p className="text-sm text-neutral-600">Ensure the CSV is available at <code>/public/data/deprisk_synth_6004.csv</code> and is accessible at <code>/data/deprisk_synth_6004.csv</code> after deploy.</p>
+        <h1 className="text-2xl font-semibold">Cohort Dashboard</h1>
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 whitespace-pre-line">{error}</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto max-w-6xl p-6 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Cohort KPI (Synthetic)</h1>
-        <p className="text-sm text-neutral-600">
-          Explore incident rates by sleep duration and fragmentation. Use slicers to segment by sex, age, and diabetes.
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold">Cohort Dashboard</h1>
+        <p className="text-sm text-neutral-700">
+          Explore new depression cases by sleep duration and sleep fragmentation. Filter by sex, age, and diabetes to see how rates change.
         </p>
-        <p className="text-xs text-neutral-500">This demo uses synthetic data derived from published descriptives.</p>
+        <details className="rounded-lg border bg-neutral-50 p-3 text-sm text-neutral-700">
+          <summary className="cursor-pointer select-none font-medium">How to read this chart</summary>
+          <ul className="ml-5 list-disc space-y-1 pt-2">
+            <li><b>Incidence rate</b>: share of people who developed depression during follow-up.</li>
+            <li><b>Relative risk (lift)</b>: a cell’s incidence divided by the overall rate.</li>
+            <li><b>Fragmentation quartile</b>: Q1 is least fragmented; Q4 is most fragmented sleep.</li>
+          </ul>
+        </details>
       </header>
 
       {/* Controls */}
@@ -330,7 +341,7 @@ Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served
         </div>
 
         <div className="flex flex-col">
-          <label className="text-xs text-neutral-600" htmlFor="ageBand">Age band</label>
+          <label className="text-xs text-neutral-600" htmlFor="ageBand">Age group</label>
           <select id="ageBand" className="rounded-lg border bg-white px-3 py-2" value={filters.ageBand} onChange={(e) => setFilters((v) => ({ ...v, ageBand: e.target.value as Filters["ageBand"] }))}>
             {["All", ...AGE_BANDS].map((x) => (
               <option key={x}>{x}</option>
@@ -348,7 +359,7 @@ Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served
         </div>
 
         <div className="flex flex-col">
-          <label className="text-xs text-neutral-600" htmlFor="metric">Heatmap value</label>
+          <label className="text-xs text-neutral-600" htmlFor="metric">Heatmap shows</label>
           <select id="metric" className="rounded-lg border bg-white px-3 py-2" value={metric} onChange={(e) => setMetric(e.target.value as HeatmapMetric)}>
             {(["Incident Rate", "Case Share"] as HeatmapMetric[]).map((m) => (
               <option key={m}>{m}</option>
@@ -363,37 +374,40 @@ Ensure the CSV is available at web/public/data/deprisk_synth_6004.csv → served
 
       {/* KPIs */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPI title="IR (Overall)" value={pct(all.overallIR)} />
-        <KPI title="IR (Current)" value={pct(ir)} />
-        <KPI title="Population" value={num(population)} />
-        <KPI title="LongSleep Rate" value={pct(longSleepRate)} />
+        <KPI title="Incidence rate (overall)" value={pct(all.overallIR)} />
+        <KPI title="Incidence rate (filtered)" value={pct(ir)} />
+        <KPI title="People in view" value={num(population)} />
+        <KPI title="Long sleepers (≥9h)" value={pct(longSleepRate)} />
       </section>
 
       {/* Heatmap (render only when data present to avoid ECharts touching null state) */}
-      <section className="rounded-2xl bg-white p-3 shadow">
+      <section className="rounded-2xl bg-white p-3 shadow space-y-3">
         {all.totalPop > 0 ? (
           <ReactECharts option={heatmapOption as any} style={{ height: 520 }} notMerge lazyUpdate />
         ) : (
           <div className="h-64" />
         )}
+        <p className="px-2 text-xs text-neutral-600">
+          Rows: sleep fragmentation quartile (<b>Q1</b> = least fragmented, <b>Q4</b> = most). Columns: sleep duration bands. Darker cells mean higher values.
+        </p>
       </section>
 
-      {/* Top-3 segments */}
+      {/* Top segments */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Top-3 Segments (by Lift)</h2>
+          <h2 className="text-lg font-semibold">Top segments (highest relative risk)</h2>
           <ExportTop3Button top3={top3} />
         </div>
         <div className="overflow-hidden rounded-2xl border">
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-left">
               <tr>
-                <Th>Sleep</Th>
-                <Th>Frag</Th>
-                <Th>Incident Rate</Th>
-                <Th>Lift</Th>
-                <Th>Population Share</Th>
-                <Th>Case Share</Th>
+                <Th>Sleep duration</Th>
+                <Th>Fragmentation quartile</Th>
+                <Th>Incidence rate</Th>
+                <Th>Relative risk (lift)</Th>
+                <Th>Cohort share</Th>
+                <Th>Share of new cases</Th>
               </tr>
             </thead>
             <tbody>
@@ -437,11 +451,20 @@ function Td({ children }: { children: React.ReactNode }) {
   return <td className="px-3 py-2 align-middle">{children}</td>;
 }
 
-function ExportTop3Button({ top3 }: { top3: { sleep: string; frag: string; ir: number; lift: number; popShare: number; caseShare: number; }[] }) {
+function ExportTop3Button({
+  top3,
+}: {
+  top3: { sleep: string; frag: string; ir: number; lift: number; popShare: number; caseShare: number }[];
+}) {
   const exportCsv = () => {
     const header = ["sleep", "frag", "ir", "lift", "popShare", "caseShare"].join(",");
     const rows = top3
-      .map((t) => `${t.sleep},${t.frag},${t.ir.toFixed(4)},${t.lift.toFixed(4)},${t.popShare.toFixed(4)},${t.caseShare.toFixed(4)}`)
+      .map(
+        (t) =>
+          `${t.sleep},${t.frag},${t.ir.toFixed(4)},${t.lift.toFixed(4)},${t.popShare.toFixed(4)},${t.caseShare.toFixed(
+            4
+          )}`
+      )
       .join("\n");
     const blob = new Blob([header + "\n" + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -452,6 +475,8 @@ function ExportTop3Button({ top3 }: { top3: { sleep: string; frag: string; ir: n
     URL.revokeObjectURL(url);
   };
   return (
-    <button onClick={exportCsv} className="rounded-lg border px-3 py-1.5 text-sm hover:bg-neutral-100">Export CSV</button>
+    <button onClick={exportCsv} className="rounded-lg border px-3 py-1.5 text-sm hover:bg-neutral-100">
+      Download CSV
+    </button>
   );
 }
