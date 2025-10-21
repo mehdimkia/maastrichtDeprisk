@@ -226,81 +226,83 @@ export default function CohortKPIPage() {
       )}×; ${pct(top3[0].popShare)} of cohort; ${pct(top3[0].caseShare)} of cases).`
     : "";
 
-  // ECharts config
-  const MAX_IR = 0.35; // fixed scale for visual stability
-  const heatmapOption = useMemo(
-    () => ({
-      tooltip: {
-        trigger: "item",
-        formatter: (p: any) => {
-          const sc = SLEEP_CATS[p.value[0]];
-          const fq = FRAG_QS[p.value[1]];
-          const cPop = p.value[3] as number;
-          const cCases = p.value[4] as number;
-          const inc = p.value[5] as number; // incidence (cell)
-          const cPopShare = p.value[6] as number;
-          const cCaseShare = p.value[7] as number;
-          return [
-            `${fq} × ${sc}`,
-            `Incidence: ${pct(inc)}`,
-            `Cases: ${num(cCases)} / ${num(cPop)}`,
-            `Cohort share: ${pct(cPopShare)}`,
-            `Share of cases: ${pct(cCaseShare)}`,
-          ].join("<br/>");
+ // ECharts config
+const MAX_IR = 0.35;
+const heatmapOption = useMemo(
+  () => ({
+    tooltip: {
+      trigger: "item",
+      formatter: (p: any) => {
+        const sc = SLEEP_CATS[p.value[0]];
+        const fq = FRAG_QS[p.value[1]];
+        const cPop = p.value[3] as number;
+        const cCases = p.value[4] as number;
+        const inc = p.value[5] as number;
+        const cPopShare = p.value[6] as number;
+        const cCaseShare = p.value[7] as number;
+        return [
+          `${fq} × ${sc}`,
+          `Incidence: ${pct(inc)}`,
+          `Cases: ${num(cCases)} / ${num(cPop)}`,
+          `Cohort share: ${pct(cPopShare)}`,
+          `Share of cases: ${pct(cCaseShare)}`,
+        ].join("<br/>");
+      },
+    },
+    grid: { left: 70, right: 90, bottom: 60, top: 40 },
+    xAxis: {
+      type: "category",
+      data: SLEEP_CATS,
+      axisLabel: { interval: 0 },
+      name: "Sleep duration",
+      nameLocation: "middle",
+      nameGap: 35,
+      nameTextStyle: { fontSize: 12, color: "#4b5563" },
+    },
+    yAxis: {
+      type: "category",
+      data: FRAG_QS,
+      name: "Sleep fragmentation (Q1 low → Q4 high)",
+      nameLocation: "middle",
+      nameGap: 55,
+      nameTextStyle: { fontSize: 12, color: "#4b5563" },
+    },
+    visualMap: {
+      min: 0,
+      max: metric === "Incident Rate" ? MAX_IR : 0.35,
+      // ⬇️ map color to the metric at index 2 (not x/y)
+      dimension: 2,
+      orient: "vertical",
+      right: 10,
+      top: 20,
+      // ⬇️ ensure higher = darker
+      inRange: {
+        color: ["#e8ecff", "#b2c4ff", "#6b8cff", "#3b82f6", "#1e40af"],
+      },
+      inverse: false,
+    },
+    series: [
+      {
+        type: "heatmap",
+        data: matrix,
+        label: {
+          show: true,
+          formatter: (p: any) => pct(p.value[2]),
+          color: "#111827",
+          fontWeight: 600,
+          textBorderColor: "rgba(255,255,255,0.95)",
+          textBorderWidth: 2,
+        },
+        emphasis: {
+          itemStyle: { shadowBlur: 10 },
+          label: { show: true },
         },
       },
-      // Give the visualMap room on the right; it sits outside the plotting area
-      grid: { left: 70, right: 90, bottom: 60, top: 40 },
-      xAxis: {
-        type: "category",
-        data: SLEEP_CATS,
-        axisLabel: { interval: 0 },
-        name: "Sleep duration",
-        nameLocation: "middle",
-        nameGap: 35,
-        nameTextStyle: { fontSize: 12, color: "#4b5563" },
-      },
-      yAxis: {
-        type: "category",
-        data: FRAG_QS,
-        name: "Sleep fragmentation (Q1 low → Q4 high)",
-        nameLocation: "middle",
-        nameGap: 55,
-        nameTextStyle: { fontSize: 12, color: "#4b5563" },
-      },
-      visualMap: {
-        min: 0,
-        max: metric === "Incident Rate" ? MAX_IR : 0.35,
-        calculable: false,
-        orient: "vertical",
-        right: 10,
-        top: 20,
-      },
-      series: [
-        {
-          type: "heatmap",
-          data: matrix,
-          // Higher-contrast labels with a subtle white outline ("halo")
-          label: {
-            show: true,
-            formatter: (p: any) => pct(p.value[2]),
-            color: "#111827", // slate-900
-            fontWeight: 600,
-            textBorderColor: "rgba(255,255,255,0.95)",
-            textBorderWidth: 2,
-          },
-          // Keep labels readable on hover
-          emphasis: {
-            itemStyle: { shadowBlur: 10 },
-            label: {
-              show: true,
-            },
-          },
-        },
-      ],
-    }),
-    [matrix, metric]
-  );
+    ],
+  }),
+  [matrix, metric]
+);
+
 
   // -------------------------
   // Dev sanity tests (non-breaking)
