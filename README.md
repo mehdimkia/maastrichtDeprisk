@@ -1,135 +1,191 @@
-# Maastricht Deprisk 🧠📈  
-_A proof-of-concept for predicting incident depressive symptoms in the Maastricht Study_
+# Maastricht Deprisk 🧠📈
 
-![build](https://img.shields.io/badge/build-passing-brightgreen)
-![license](https://img.shields.io/badge/license-MIT-blue)
+*A research prototype to estimate ****\~4-year**** risk of developing clinically relevant depressive symptoms (PHQ-9 ≥ 10) from wearable-derived sleep metrics plus clinical and sociodemographic covariates, trained on The Maastricht Study.*
 
----
+&#x20;
 
-## Project status — August 12, 2025
-
-- **ML pipeline v1.0 frozen** using the Week-7 feature set; production training lives in `src/production/train_xgb_server.py` and exports a fully self-contained scikit-learn pipeline (`.joblib`) with a JSON sidecar of metrics and hyper-parameters.  
-- **Companion web demo (internal beta)** is **included in this repository** under **`src/app`** (Next.js 15):  
-  - **Predict** page: interactive risk calculator backed by the exported pipeline. We **removed “Low/Moderate/High” risk bands** and now display **absolute 7-year risk** (with short “ℹ️ info” tooltips per predictor, including Sleep Fragmentation).  
-  - **Advanced predictors** (history of depression, antidepressant use, neuropathy) are **temporarily hidden** in the UI while we finalize clinical messaging and documentation.  
-  - **Power BI dashboard route** is present and marked **“Under construction.”**
-- **No Maastricht Study data** are contained in this repository. This repo includes **code only** and, where needed, **synthetic examples** for demonstration.
-- Model artifacts are written to `Databases/Week7_xgb_onehot_interactions.joblib` with a `.meta.json` sidecar (AUROC, AUPRC, hyper-parameters).
-
-> ⚠️ **Clinical & data governance**  
-> This software is a **research prototype** and **not a medical device**. Results should **not** be used for diagnosis or treatment decisions. Use of Maastricht Study data is governed by its data-use agreements and publication procedures; do **not** redistribute study data or derived participant-level outputs. Keep the web demo strictly to synthetic/illustrative inputs unless you have explicit approval.
+> **Not a medical device.** Research/education use only. Do **not** use results for diagnosis or treatment. Maastricht Study data are governed by data-use agreements; this repository contains **code only** (no study data).
 
 ---
 
-## Contents
+## Project status — November 2025
 
-**src/**
-- **production/** ← everything the web / API will import  
-  - `data_ingest_server.py`  
-  - `feature_engineering_server.py`  
-  - `feature_engineering_interactions.py`  
-  - `qa_feature_files.py`  
-  - `train_xgb_server.py` 🏆
-
-- **experiments/** ← one-off benchmarks & notebooks  
-  - `train_cat_xgb_server.py`  
-  - `train_xgb_ensemble.py`  
-  - `train_xgb_improved.py`  
-  - `train_models_server.py`  
-  - `imbalance_utils.py`, `test_setup.py`
-
-- **app/** (Next.js) ← the **web demo** (internal beta)  
-  - `/` (Home)  
-  - `/predict` (risk calculator)  
-  - `/powerbi` (placeholder: “Under construction”)  
-  - `components/ui/*` (including `tooltip`)
-
-**catboost_info/** ← CatBoost training logs (git-ignored)
+- **Model v2 (Week-8 feature set)** with interaction features and a spline basis for nightly in-bed minutes; exported as a single **scikit-learn pipeline** (`.joblib`) with a `.meta.json` sidecar (metrics + hyper-params).
+- **FastAPI scoring service** (`/score`) for low-latency inference with an optional API key.
+- **Next.js app** with:
+  - **Predictor** (interactive risk calculator).
+  - **Dashboard** (explore incidence by **sleep duration × fragmentation** and subgroups).
+  - **Model/API** info pages.
+- **Hold-out performance:** AUROC ≈ **0.71**, AUPRC ≈ **0.29**.\
+  **Analytic cohort:** \~**6,004** participants; **880** incident cases.
 
 ---
 
-## Model leaderboard (Week-7 feature set)
+## What’s inside
 
-| Script | Features | AUROC | AUPRC | Notes |
-|--------|----------|------:|------:|-------|
-| **production/train_xgb_server.py** | one-hot + 5-knot spline | **0.710** | **0.294** | Production v1.0 |
-| experiments/train_cat_xgb_server.py | CatBoost native cats | 0.702 | 0.291 | –0.8 pp AUROC |
-| experiments/train_xgb_ensemble.py | Stacked (XGB + LR) | 0.700 | 0.295 | +0.1 pp AUPRC, but more complex |
-| experiments/train_xgb_improved.py | Cost-sensitive XGB | 0.706 | 0.295 | Tied AUPRC |
+```
+maastrichtDeprisk/
+├─ api/                       # FastAPI scoring service
+│  └─ main.py
+├─ V2/
+│  └─ src/                    # Training & feature engineering
+│     ├─ data_ingest_server.py
+│     ├─ feature_engineering_interactions.py
+│     └─ train_xgb_server.py
+├─ web/                       # Next.js app (App Router)
+│  └─ src/app/
+│     ├─ page.tsx            # Landing
+│     ├─ predict/            # Predictor page
+│     └─ powerbi/            # Cohort dashboard (embedded)
+└─ README.md
+```
 
-> **Data split:** 4,803 training / 1,201 test participants — see `src/production/data_ingest_server.py` for details of the pipeline and data checks.
+**Model artifacts (after training)**\
+`Databases/Week8_xgb_onehot_interactions.joblib`\
+`Databases/Week8_xgb_onehot_interactions.meta.json`
 
 ---
 
-## Quick-start
+## Quick start
 
-### Train the production model (Python)
+### 1) Train (Python 3.10+)
+
+Use your environment manager of choice (uv/venv/conda/poetry).
 
 ```bash
-git clone https://github.com/<your-handle>/maastrichtDeprisk.git
-cd maastrichtDeprisk
-poetry install                    # or: pip install -r requirements.txt
-poetry run python src/production/train_xgb_server.py
-```
-The trained pipeline is saved to `Databases/Week7_xgb_onehot_interactions.joblib` with a `.meta.json` sidecar containing AUROC, AUPRC and hyper-parameters.
+# 1) Ingest → intermediate pickle (paths are examples)
+python V2/src/data_ingest_server.py \
+  --input /secure/maastricht/Week7.sav \
+  --out-pkl /secure/maastricht/Week8.pkl
 
-### Run the web demo (Next.js)
+# 2) Feature engineering + split (produces Week8_* parquet files)
+python V2/src/feature_engineering_interactions.py
+
+# 3) Tune & train XGBoost, export champion pipeline + meta.json
+python V2/src/train_xgb_server.py
+```
+
+Artifacts are written under `Databases/` and include the full preprocessing+model pipeline suitable for direct `.predict_proba()` use.
+
+### 2) Run the scoring API (FastAPI)
 
 ```bash
-# From the repository root
-npm install        # or: pnpm install / yarn
-npm run dev        # starts Next.js on http://localhost:3000
-```
-> Requires **Node.js 18.17+** (Node 20+ recommended). The demo uses components in `src/app` and `src/components/ui`.
+cd api
+# Install deps (choose one)
+pip install -r requirements.txt || poetry install
 
-### Score with the trained pipeline (Python)
+# Set env vars (example)
+export MODEL_PATH="../Databases/Week8_xgb_onehot_interactions.joblib"
+export MODEL_API_KEY="dev-secret"           # optional; require via x-api-key
+export CORS_ORIGINS="http://localhost:3000" # comma-separated
+
+uvicorn main:app --reload --port 8000
+```
+
+**Endpoint**
+
+- `POST /score` → `{ "prob": <float> }`
+
+**Minimal request body (example)**
+
+```json
+{
+  "sleep_minutes": 480,
+  "frag_quartile": 3,
+  "age": 60,
+  "sex": "M"
+}
+```
+
+**Extended optional fields** (names may vary slightly depending on your schema):
+
+- `bmi`, `education`, `marital_status`, `smoking_status`, `alcohol_use`,\
+  `diabetes`, `cvd`, `dhdi`, `mvpa`,\
+  `prior_depr` (history of depression), `med_depr` (antidepressant use), `neuropathy`.
+
+**curl**
+
+```bash
+curl -X POST http://localhost:8000/score \
+  -H "content-type: application/json" \
+  -H "x-api-key: dev-secret" \
+  -d '{"sleep_minutes":480,"frag_quartile":3,"age":60,"sex":"M"}'
+```
+
+### 3) Run the web app (Node 18+ recommended)
+
+```bash
+cd web
+npm install
+cp .env.local.example .env.local
+
+# Point the frontend to your API:
+# NEXT_PUBLIC_API_URL=http://localhost:8000
+
+npm run dev   # → http://localhost:3000
+```
+
+**Routes**
+
+- `/` – Landing
+- `/predict` – Risk calculator (posts JSON to the API)
+- `/powerbi` – Cohort dashboard (embedded)
+
+---
+
+## Model summary (v2)
+
+- **Estimator:** Gradient-boosted trees (**XGBoost** `hist`) with class-imbalance handling.
+- **Features:** one-hot encoded categoricals; **restricted cubic spline** for nightly in-bed minutes; engineered interactions (e.g., sleep × vulnerability); standardization where applicable.
+- **Split:** stratified train/test with fixed seed; metrics reported on the **held-out** test set.
+- **Primary metrics:** **AUROC** and **AUPRC**; calibration and utility curves monitored during experimentation.
+- **Export:** `joblib` pipeline that includes preprocessing + model; sidecar `.meta.json` records AUROC/AUPRC and hyper-parameters for exact reproducibility.
+
+**Scoring directly from Python**
 
 ```python
 from joblib import load
 import pandas as pd
 
-# Load exported pipeline
-pipe = load("Databases/Week7_xgb_onehot_interactions.joblib")
-
-# Score new data (must match the training schema)
-X = pd.read_parquet("path/to/new_data.parquet")  # or construct a DataFrame
-probas = pipe.predict_proba(X)[:, 1]
+pipe = load("Databases/Week8_xgb_onehot_interactions.joblib")
+X = pd.DataFrame([{ "sleep_minutes": 480, "frag_quartile": 3, "age": 60, "sex": "M" }])
+proba = pipe.predict_proba(X)[0, 1]
 ```
 
 ---
 
-## Evaluation protocol (summary)
+## Environment variables
 
-- Stratified train/test split with fixed seed; metrics reported on the **held-out test set**.  
-- Primary metrics: **AUROC** and **AUPRC**; we also monitor calibration and decision-curve utilities during experimentation.  
-- Features include one-hot encoded categorical variables and spline-expanded continuous predictors (5-knot).
+**API**
 
----
+- `MODEL_PATH` — filesystem path to the exported `.joblib`.
+- `MODEL_API_KEY` — if set, requests must provide `x-api-key` header.
+- `CORS_ORIGINS` — comma-separated list of allowed origins (default `*`).
 
-## Web demo notes (internal)
+**Web**
 
-- Absolute risk is shown without band labels; the rationale is to avoid over-simplification in communications to clinicians and participants.  
-- Each input includes a concise **“ℹ️ info” tooltip** explaining the measurement (e.g., Sleep Fragmentation definition).  
-- The Power BI dashboard route is live with an “Under construction” message until the analytics view is finalized.  
-- Source files live under `src/app/*` with shared components in `src/components/*`.
+- `NEXT_PUBLIC_API_URL` — base URL for the scoring API.
 
 ---
 
-## Road-map
+## Privacy & data governance
 
-- [x] Export production pipeline & metadata
-- [x] Web demo (internal beta) co-located in this repository
-- [ ] REST/JSON scoring API (FastAPI) and/or AWS endpoint
-- [ ] Calibration & drift monitoring (Evidently / MLflow)
-- [ ] Model Card + documentation of fairness and external validity
-- [ ] Manuscript preparation and (if approved) public data dictionary
+- This repository ships **no raw cohort data**. Keep all demos to **synthetic or derived** inputs unless you have explicit permission under the Maastricht Study’s DUA.
+- The public app is **privacy-first**: only small, derived features (not raw wearable streams) are sent to the API.
+- Any real-world deployment must pass institutional review and security checks.
+
+---
+
+## Roadmap
+
+-
 
 ---
 
 ## Changelog
 
-- **2025-08-12** — Web demo (internal beta) launched **inside this repo**; removed risk band labels; added predictor tooltips; published Power BI “Under construction” page.  
-- **2025-07** — Pipeline v1.0 frozen on Week-7 feature set; metrics exported alongside model artifact.
+- **2025-11-04** — Updated README for v2 (API + Next.js predictor & dashboard; Week-8 feature set; clarified env/config).
+- **2025-08** — v1 pipeline frozen; internal demo shipped.
 
 ---
 
@@ -141,7 +197,11 @@ This project is licensed under the **MIT License**. See `LICENSE` for details.
 
 ## How to cite
 
-If you use parts of this codebase in research, please cite as:
+> *Maastricht Deprisk (v2, 2025): A reproducible ML pipeline and web demo for estimating incident depressive-symptom risk using The Maastricht Study.*
 
-> _Maastricht Deprisk: A proof-of-concept pipeline for predicting incident depressive symptoms in the Maastricht Study (v1.0, 2025)._
+---
+
+## Acknowledgments
+
+We thank participants and investigators of **The Maastricht Study** and all collaborators who contributed feedback on feature engineering, model evaluation, clinical framing, and product design.
 
